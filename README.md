@@ -58,6 +58,7 @@ pip-audit -r requirements.txt              # No known vulnerabilities found
 ```
 
 ## Документація
+- [Звіт (.docx)](docs/Кондратюк_ПР5-7_Безпечні_мережеві_застосунки.docx)
 - [docs/topology.md](docs/topology.md) — вузли, адреси, порти, потоки даних
 - [docs/security.md](docs/security.md) — TLS, автентифікація, JWT, MFA, rate limit, журнали, CI; що виправлено порівняно з шаблоном
 - [docs/analysis.md](docs/analysis.md) — продуктивність HTTP vs HTTPS, підсумкова оцінка захищеності

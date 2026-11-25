@@ -1,7 +1,7 @@
 # Механізми захисту
 
 ## 1. TLS
-- `gencerts.sh`: кореневий CA RSA-4096 (10 років, `basicConstraints=CA:TRUE`) → серверний ключ **ECDSA P-256**,
+- `gencerts.sh`: кореневий CA RSA-4096 (5 років, `basicConstraints=CA:TRUE`) → серверний ключ **ECDSA P-256**,
   сертифікат на 398 днів, `keyUsage=digitalSignature`, `extendedKeyUsage=serverAuth`,
   SAN = `DNS:localhost, DNS:server, DNS:secure-server, IP:127.0.0.1` + IP з аргументу. Ключі мають права 600.
 - Фактичне рукостискання (`client.py tls-info`, `openssl s_client`): **TLSv1.3, TLS_AES_256_GCM_SHA384**, обмін ключами X25519, підпис ECDSA/SHA-256.
