@@ -1,0 +1,7 @@
+server/certs/
+server/logs/*.jsonl
+client/.tokens.json
+client/mfa_qr.png
+__pycache__/
+server/users.json
+*.tmp
