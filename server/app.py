@@ -33,7 +33,7 @@ bucket = TokenBucket()
 
 
 def client_ip(req: Request) -> str:
-    return req.client.host if req.client else "0.0.0.0"
+    return req.client.host if req.client else "unknown"
 
 
 def reset_state():

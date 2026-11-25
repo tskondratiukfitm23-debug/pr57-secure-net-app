@@ -51,7 +51,7 @@ class UserStore:
             if username in self.users:
                 raise ValueError("user exists")
             self.users[username] = {"pwd": hash_password(password), "role": role,
-                                    "totp_secret": None, "mfa_enabled": False, "totp_last": 0}
+                                    "totp_secret": None, "mfa_enabled": False, "totp_last": 0}  # nosec B105
             self.save()
 
     def public(self):

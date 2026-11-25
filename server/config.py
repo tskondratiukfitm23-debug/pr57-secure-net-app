@@ -16,9 +16,9 @@ if not JWT_SECRET:
         sys.exit("JWT_SECRET is required in prod")
     # dev: ефемерний секрет на час життя процесу (токени стають недійсними після перезапуску)
     JWT_SECRET = secrets.token_urlsafe(48)
-    JWT_SECRET_SOURCE = "ephemeral"
+    JWT_SECRET_SOURCE = "ephemeral"  # nosec B105
 else:
-    JWT_SECRET_SOURCE = "env"
+    JWT_SECRET_SOURCE = "env"  # nosec B105
 if len(JWT_SECRET) < 32:
     sys.exit("JWT_SECRET must be at least 32 characters")
 

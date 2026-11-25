@@ -29,12 +29,29 @@ def short(tok: str) -> str:
     return tok[:16] + "…" + tok[-6:] if tok else "-"
 
 
+class SourceAdapter(requests.adapters.HTTPAdapter):
+    """Прив'язує вихідні з'єднання до заданої IP (імітація окремого вузла-клієнта)."""
+
+    def __init__(self, src, **kw):
+        self.src = src
+        super().__init__(**kw)
+
+    def init_poolmanager(self, *args, **kw):
+        kw["source_address"] = (self.src, 0)
+        super().init_poolmanager(*args, **kw)
+
+
 class Client:
     def __init__(self, a):
         self.a = a
         self.http = f"http://{a.host}:{a.http_port}"
         self.https = f"https://{a.host}:{a.https_port}"
         self.verify = a.ca if a.ca else True
+        self.s = requests.Session()
+        if getattr(a, "src", None):  # вихідна IP-адреса клієнтського вузла
+            ad = SourceAdapter(a.src)
+            self.s.mount("http://", ad)
+            self.s.mount("https://", ad)
 
     # ---- helpers
     def req(self, method, path, tls=True, token=None, **kw):
@@ -43,7 +60,7 @@ class Client:
         if token:
             h["Authorization"] = f"Bearer {token}"
         t = time.perf_counter()
-        r = requests.request(method, url, headers=h, timeout=10, verify=self.verify if tls else True, **kw)
+        r = self.s.request(method, url, headers=h, timeout=10, verify=self.verify if tls else True, **kw)
         ms = (time.perf_counter() - t) * 1000
         return r, ms
 
@@ -88,7 +105,7 @@ def cmd_echo(c, a):
 
 def cmd_plain_auth(c, a):
     print(f"→ POST {c.http}/auth/login  (спроба логіну по HTTP)")
-    r, ms = c.req("POST", "/auth/login", tls=False, json={"username": "alice", "password": "x"})
+    r, ms = c.req("POST", "/auth/login", tls=False, json={"username": "alice", "password": "x"})  # nosec B105
     c.show(r, ms)
 
 
@@ -98,7 +115,8 @@ def cmd_tls_info(c, a):
     sni = a.sni or a.host
     print(f"→ TLS handshake з {a.host}:{a.https_port} (SNI/hostname={sni}, CA={a.ca or 'системне сховище'})")
     try:
-        with socket.create_connection((a.host, a.https_port), timeout=5) as raw:
+        with socket.create_connection((a.host, a.https_port), timeout=5,
+                                      source_address=(a.src, 0) if a.src else None) as raw:
             with ctx.wrap_socket(raw, server_hostname=sni) as s:
                 cert = s.getpeercert()
                 name, ver, bits = s.cipher()
@@ -157,7 +175,7 @@ def cmd_secure_echo(c, a):
     c.show(r, ms)
 
 
-def cmd_admin(c, a):
+def cmd_admin_users(c, a):
     t = c.tokens()
     print(f"→ GET /admin/users  від імені {t['user']}")
     r, ms = c.req("GET", "/admin/users", token=t["access"])
@@ -246,7 +264,7 @@ def cmd_brute(c, a):
 
 def cmd_flood(c, a):
     print(f"DoS-імітація: {a.n} запитів GET /health, {a.workers} потоків")
-    s = requests.Session()
+    s = c.s
     s.verify = c.verify
 
     def one(_):
@@ -285,7 +303,7 @@ def cmd_bypass(c, a):
          b64u(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode()) + "." +
          b64u(json.dumps(esc, separators=(",", ":")).encode()) + "." + sig),
         ("Підроблений підпис (вгаданий секрет)", "/admin/users", forge({"alg": "HS256", "typ": "JWT"}, esc, b"secret")),
-        ("Прострочений токен (exp у минулому)", "/whoami",
+        ("Прострочений (exp=1) + підроблений підпис", "/whoami",
          forge({"alg": "HS256", "typ": "JWT"}, dict(payload, exp=1), b"secret")),
         ("refresh-токен замість access", "/whoami", t["refresh"]),
         (f"Легітимний токен {t['user']} → адмін-ендпоінт", "/admin/users", acc),
@@ -300,11 +318,12 @@ def cmd_bypass(c, a):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Secure Net App client")
+    ap = argparse.ArgumentParser(description="Secure Net App client", allow_abbrev=False)
     ap.add_argument("--host", default=os.environ.get("SNA_HOST", "127.0.0.1"))
     ap.add_argument("--http-port", type=int, default=int(os.environ.get("SNA_HTTP_PORT", 8080)))
     ap.add_argument("--https-port", type=int, default=int(os.environ.get("SNA_HTTPS_PORT", 8443)))
     ap.add_argument("--ca", default=os.environ.get("SNA_CA"))
+    ap.add_argument("--src", default=os.environ.get("SNA_SRC"), help="вихідна IP клієнта")
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("echo"); g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--http", action="store_true"); g.add_argument("--https", action="store_true")

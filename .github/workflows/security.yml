@@ -1,0 +1,62 @@
+name: security
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sast:
+    name: Bandit (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install bandit
+      - name: Bandit (fail on medium+)
+        run: |
+          bandit -r server client tools -f json -o bandit.json || true
+          bandit -r server client tools -ll
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: bandit-report, path: bandit.json }
+  deps:
+    name: pip-audit (SCA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pip-audit
+      - run: pip-audit -r requirements.txt --strict --desc
+  tests:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -v
+  e2e:
+    name: E2E (TLS + JWT + rate limit)
+    needs: [tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r requirements.txt
+      - name: Start servers
+        run: SRV_IP=127.0.0.1 bash scripts/run_local.sh
+      - name: Client scenarios
+        env: { SNA_HOST: 127.0.0.1, SNA_CA: server/certs/ca.crt }
+        run: |
+          python client/client.py echo --http --msg hello
+          python client/client.py plain-auth
+          python client/client.py tls-info
+          python client/client.py login --user alice --password 'Alice-Passw0rd!'
+          python client/client.py whoami
+          python client/client.py bypass
+          python client/client.py brute --user bob --wrong 8

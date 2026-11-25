@@ -1,0 +1,36 @@
+# Два вузли в ізольованій мережі 172.28.0.0/24:
+#   secure-server 172.28.0.10 (HTTP 8080 / HTTPS 8443), client 172.28.0.20
+services:
+  secure-server:
+    build: .
+    hostname: secure-server
+    environment:
+      - APP_ENV=prod
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET (>=32 chars)}
+    command: >
+      sh -c "bash server/scripts/gencerts.sh 172.28.0.10 &&
+             python -m server.scripts.create_users --reset &&
+             (uvicorn server.app:app --host 0.0.0.0 --port 8080 &) &&
+             uvicorn server.app:app --host 0.0.0.0 --port 8443
+             --ssl-keyfile server/certs/server.key --ssl-certfile server/certs/server.crt"
+    volumes:
+      - certs:/app/server/certs
+    networks:
+      lab: { ipv4_address: 172.28.0.10 }
+  client:
+    build: .
+    depends_on: [secure-server]
+    environment:
+      - SNA_HOST=secure-server
+      - SNA_CA=/certs/ca.crt
+    volumes:
+      - certs:/certs:ro
+    command: sleep infinity
+    networks:
+      lab: { ipv4_address: 172.28.0.20 }
+volumes:
+  certs:
+networks:
+  lab:
+    ipam:
+      config: [{ subnet: 172.28.0.0/24 }]

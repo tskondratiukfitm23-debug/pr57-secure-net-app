@@ -15,7 +15,7 @@ SENSITIVE = {"password", "pwd", "token", "access_token", "refresh_token", "otp",
              "totp_secret", "authorization", "jwt", "mfa_token"}
 
 # event -> category (для фільтрації за типом)
-CATEGORIES = {"http": "request", "auth": "auth", "mfa": "auth", "token": "session",
+CATEGORIES = {"http": "request", "auth": "auth", "mfa": "auth", "token": "session",  # nosec B105
               "access": "access", "rate": "security", "lockout": "security", "tls": "security",
               "server": "system", "error": "error", "admin": "admin"}
 
