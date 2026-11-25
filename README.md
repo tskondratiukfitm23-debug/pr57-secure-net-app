@@ -74,3 +74,4 @@ pip-audit -r requirements.txt              # No known vulnerabilities found
 | ![](docs/screenshots/11_log_filters.png) Фільтри журналу | ![](docs/screenshots/12_log_analysis.png) Аналіз журналу |
 | ![](docs/screenshots/13_pytest.png) pytest | ![](docs/screenshots/14_bandit_pip_audit.png) Bandit, pip-audit |
 | ![](docs/screenshots/15_bench.png) Бенчмарк | ![](docs/bench_chart.png) Графік p50/p95 |
+| ![](docs/screenshots/16_github_repo.png) Репозиторій | ![](docs/screenshots/17_github_actions.png) GitHub Actions: усі 4 job пройдено |
